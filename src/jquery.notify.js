@@ -12,7 +12,19 @@
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
  *
+ *  **HEY!  READ THIS!**
+ *  This is the stripped down version of the plugin.  If you need templating built in, please visit the original author's web site
+ *  http://www.erichynds.com/jquery/a-jquery-ui-growl-ubuntu-notification-widget/
+ *
+ * This version assumes you are handeling templating OUTSIDE of the plugin.
+ * Updates to this version can be found here:  https://github.com/sgreenfield/jquery-notify-2
+ * 
+    $('#someContainer').notify("create", {
+      html: someRenderedTemplate
+    });
+  *  
 */
+
 (function($){
 
 $.widget("ech.notify", {
@@ -21,38 +33,17 @@ $.widget("ech.notify", {
 		expires: 5000,
 		stack: 'below',
 		custom: false,
-        queue: false
+        queue: false,
+        html: '<div></div>'
 	},
 	_create: function(){
 		var self = this;
-		this.templates = {};
-		this.keys = [];
-		
-		// build and save templates
-		this.element.addClass("ui-notify").children().addClass("ui-notify-message ui-notify-message-style").each(function(i){
-			var key = this.id || i;
-			self.keys.push(key);
-			self.templates[key] = $(this).removeAttr("id").wrap("<div></div>").parent().html(); // because $(this).andSelf().html() no workie
-		}).end().empty().show();
+
+		this.element.addClass("ui-notify").show();
 	},
-	create: function(template, msg, opts){
-		if(typeof template === "object"){
-			opts = msg;
-			msg = template;
-			template = null;
-		}
-		
-		var tpl = this.templates[ template || this.keys[0]];
-		
-		// remove default styling class if rolling w/ custom classes
-		if(opts && opts.custom){
-			tpl = $(tpl).removeClass("ui-notify-message-style").wrap("<div></div>").parent().html();
-		}
-		
+	create: function(opts){
         this.openNotifications = this.openNotifications || 0;
-        
-        // return a new notification instance
-        return new $.ech.notify.instance(this)._create(msg, $.extend({}, this.options, opts), tpl);            
+        return new $.ech.notify.instance(this)._create($.extend({}, this.options, opts));            
 	}
 });
 
@@ -66,36 +57,23 @@ $.extend($.ech.notify, {
 
 // instance methods
 $.extend($.ech.notify.instance.prototype, {
-	_create: function(params, options, template){
+	_create: function(options){
+        var self = this;
+
 		this.options = options;
-		
-		var self = this,
-			
-			// build html template
-			html = template.replace(/#(?:\{|%7B)(.*?)(?:\}|%7D)/g, function($1, $2){
-				return ($2 in params) ? params[$2] : '';
-			}),
-			
-			// the actual message
-			m = (this.element = $(html)),
-			
-			// close link
-			closelink = m.find(".ui-notify-close");
+        this.element = $(options.html).addClass("ui-notify-message ui-notify-message-style");
 		
 		// clickable?
 		if(typeof this.options.click === "function"){
-			m.addClass("ui-notify-click").bind("click", function(e){
+			this.element.addClass("ui-notify-click").bind("click", function(e){
 				self._trigger("click", e, self);
 			});
 		}
-		
-		// show close link?
-		if(closelink.length){
-			closelink.bind("click", function(){
-				self.close();
-				return false;
-			});
-		}
+
+        this.element.find(".ui-notify-close").bind("click", function(){
+            self.close();
+            return false;
+        });
 
         this.parent.element.queue('notify', function(){
           self.open();
